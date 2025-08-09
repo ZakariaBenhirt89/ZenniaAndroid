@@ -16,8 +16,10 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.scale
 import androidx.compose.ui.draw.blur
 import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.*
 import androidx.compose.ui.graphics.drawscope.rotate
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardType
@@ -26,10 +28,24 @@ import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.unit.dp
 import kotlin.math.cos
 import kotlin.math.sin
+import kotlin.random.Random
+import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.ui.graphics.graphicsLayer
+
+// StarData class to hold individual star properties
+private data class StarData(
+    val id: Int,
+    val initialX: Float,
+    val initialY: Float,
+    val size: Float,
+    val baseOpacity: Float,
+    val speed: Float,
+    val angle: Float // Angle in degrees for movement direction
+)
+
 @Composable
 fun AnimatedLunarBackground() {
-    val infiniteTransition = rememberInfiniteTransition(label = "lunar")
+    val infiniteTransition = rememberInfiniteTransition(label = "lunar_bg_transition")
 
     // Moon orbital animation
     val moonX by infiniteTransition.animateFloat(
@@ -39,7 +55,7 @@ fun AnimatedLunarBackground() {
             animation = tween(30000, easing = EaseInOut),
             repeatMode = RepeatMode.Reverse
         ),
-        label = "moonX"
+        label = "moonX_lunar"
     )
 
     val moonY by infiniteTransition.animateFloat(
@@ -49,27 +65,27 @@ fun AnimatedLunarBackground() {
             animation = tween(30000, easing = EaseInOut),
             repeatMode = RepeatMode.Reverse
         ),
-        label = "moonY"
+        label = "moonY_lunar"
     )
 
-    val moonOpacity by infiniteTransition.animateFloat(
+    val moonOverallOpacity by infiniteTransition.animateFloat(
         initialValue = 0f,
         targetValue = 1f,
         animationSpec = infiniteRepeatable(
             animation = tween(30000, easing = EaseInOut),
             repeatMode = RepeatMode.Reverse
         ),
-        label = "moonOpacity"
+        label = "moonOverallOpacity_lunar"
     )
 
-    val moonScale by infiniteTransition.animateFloat(
+    val moonOverallScale by infiniteTransition.animateFloat(
         initialValue = 0f,
         targetValue = 1.1f,
         animationSpec = infiniteRepeatable(
             animation = tween(30000, easing = EaseInOut),
             repeatMode = RepeatMode.Reverse
         ),
-        label = "moonScale"
+        label = "moonOverallScale_lunar"
     )
 
     // Moon glow effect
@@ -80,7 +96,7 @@ fun AnimatedLunarBackground() {
             animation = tween(8000, easing = EaseInOut),
             repeatMode = RepeatMode.Reverse
         ),
-        label = "moonGlow"
+        label = "moonGlow_lunar"
     )
 
     // Moon rotation
@@ -91,10 +107,10 @@ fun AnimatedLunarBackground() {
             animation = tween(25000, easing = LinearEasing),
             repeatMode = RepeatMode.Restart
         ),
-        label = "moonRotation"
+        label = "moonRotation_lunar"
     )
 
-    // Moon breathing scale
+    // Moon breathing scale (applied to moon body)
     val moonBreathing by infiniteTransition.animateFloat(
         initialValue = 1f,
         targetValue = 1.02f,
@@ -102,7 +118,7 @@ fun AnimatedLunarBackground() {
             animation = tween(6000, easing = EaseInOut),
             repeatMode = RepeatMode.Reverse
         ),
-        label = "moonBreathing"
+        label = "moonBreathing_lunar"
     )
 
     Box(modifier = Modifier.fillMaxSize()) {
@@ -118,95 +134,153 @@ fun AnimatedLunarBackground() {
             drawRect(brush = gradient)
         }
 
-        // Moon with orbital movement
-        Box(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(
-                    start = (moonX * 300).dp,
-                    top = (moonY * 200).dp
-                )
-        ) {
-            // Moon Glow Effect
-            Canvas(
-                modifier = Modifier
-                    .size(112.dp)
-                    .blur(2.dp)
-                    .scale(1.3f)
-            ) {
+        // --- Modified Stars Section ---
+        val starInfiniteTransition = rememberInfiniteTransition(label = "stars_transition")
+        val starOffset by starInfiniteTransition.animateFloat(
+            initialValue = 0f,
+            targetValue = 1000f,
+            animationSpec = infiniteRepeatable(
+                animation = tween(60000, easing = LinearEasing), // Slower, longer cycle
+                repeatMode = RepeatMode.Restart
+            ),
+            label = "star_offset"
+        )
+
+        val starTwinkleAlpha by starInfiniteTransition.animateFloat(
+            initialValue = 0.6f,
+            targetValue = 1.0f,
+            animationSpec = infiniteRepeatable(
+                animation = tween(2500, easing = EaseInOut),
+                repeatMode = RepeatMode.Reverse
+            ),
+            label = "star_twinkle_alpha"
+        )
+
+        var stars by remember { mutableStateOf<List<StarData>>(emptyList()) }
+        var canvasSizeForStars by remember { mutableStateOf(Size.Zero) }
+
+        Canvas(modifier = Modifier.fillMaxSize()) {
+            if (canvasSizeForStars != size) {
+                canvasSizeForStars = size
+                val starCount = 100
+                val starMinSize = 0.5f
+                val starMaxSize = 2.5f
+                val starMinSpeed = 0.02f
+                val starMaxSpeed = 0.1f
+
+                stars = List(starCount) { index ->
+                    StarData(
+                        id = index,
+                        initialX = Random.nextFloat() * size.width,
+                        initialY = Random.nextFloat() * size.height,
+                        size = starMinSize + Random.nextFloat() * (starMaxSize - starMinSize),
+                        baseOpacity = 0.4f + Random.nextFloat() * 0.6f,
+                        speed = starMinSpeed + Random.nextFloat() * (starMaxSpeed - starMinSpeed),
+                        angle = Random.nextFloat() * 360f
+                    )
+                }
+            }
+
+            stars.forEach { star ->
+                val dx = cos(Math.toRadians(star.angle.toDouble())).toFloat()
+                val dy = sin(Math.toRadians(star.angle.toDouble())).toFloat()
+
+                val animatedX = (star.initialX + starOffset * star.speed * dx).let {
+                    (it % size.width + size.width) % size.width
+                }
+                val animatedY = (star.initialY + starOffset * star.speed * dy).let {
+                    (it % size.height + size.height) % size.height
+                }
+
+                val currentStarOpacity = (star.baseOpacity * starTwinkleAlpha).coerceIn(0f, 1f)
+                val glowRadius = star.size * 2.5f
+
+                // Draw Glow
                 drawCircle(
                     brush = Brush.radialGradient(
                         colors = listOf(
-                            Color(0xFFfef08a).copy(alpha = moonGlowIntensity),
-                            Color(0xFFfef3c7).copy(alpha = moonGlowIntensity * 0.5f),
+                            Color.White.copy(alpha = currentStarOpacity * 0.5f),
                             Color.Transparent
                         ),
-                        center = center,
-                        radius = size.minDimension / 2
+                        center = Offset(animatedX, animatedY),
+                        radius = glowRadius
                     ),
-                    radius = size.minDimension / 2
+                    radius = glowRadius,
+                    center = Offset(animatedX, animatedY)
+                )
+
+                // Draw Star
+                drawCircle(
+                    color = Color.White.copy(alpha = currentStarOpacity),
+                    radius = star.size,
+                    center = Offset(animatedX, animatedY)
                 )
             }
+        }
+        // --- End of Modified Stars Section ---
 
-            // Main Moon Body
-            Canvas(
+        // Moon with orbital movement
+        BoxWithConstraints(modifier = Modifier.fillMaxSize()) {
+            val screenWidth = maxWidth
+            val screenHeight = maxHeight
+            Box(
                 modifier = Modifier
-                    .size(112.dp)
-                    .scale(moonBreathing * moonScale)
+                    //.fillMaxSize() // This Box is for the moon's positioning context
+                    .offset(x = screenWidth * moonX, y = screenHeight * moonY)
+                    .graphicsLayer( // Apply opacity and scale to the whole moon group
+                        alpha = moonOverallOpacity,
+                        scaleX = moonOverallScale,
+                        scaleY = moonOverallScale
+                    )
             ) {
-                rotate(moonRotation) {
-                    // Main moon gradient
+                // Moon Glow Effect Canvas
+                Canvas(
+                    modifier = Modifier
+                        .size(112.dp)
+                        .blur(2.dp)
+                        .scale(1.3f) // This scale is part of the glow visual, distinct from moonOverallScale
+                ) {
                     drawCircle(
                         brush = Brush.radialGradient(
                             colors = listOf(
-                                Color(0xFFfef08a),
-                                Color(0xFFfef3c7),
-                                Color(0xFFfefce8)
+                                Color(0xFFfef08a).copy(alpha = moonGlowIntensity),
+                                Color(0xFFfef3c7).copy(alpha = moonGlowIntensity * 0.5f),
+                                Color.Transparent
                             ),
                             center = center,
                             radius = size.minDimension / 2
                         ),
                         radius = size.minDimension / 2
                     )
-
-                    // Moon craters
-                    drawCircle(
-                        color = Color(0xFFfcd34d).copy(alpha = 0.4f),
-                        radius = 12f,
-                        center = Offset(20f, 16f)
-                    )
-                    drawCircle(
-                        color = Color(0xFFfcd34d).copy(alpha = 0.35f),
-                        radius = 8f,
-                        center = Offset(28f, 40f)
-                    )
-                    drawCircle(
-                        color = Color(0xFFfcd34d).copy(alpha = 0.3f),
-                        radius = 10f,
-                        center = Offset(40f, 32f)
-                    )
-                    drawCircle(
-                        color = Color(0xFFfcd34d).copy(alpha = 0.25f),
-                        radius = 6f,
-                        center = Offset(32f, 64f)
-                    )
                 }
-            }
-        }
 
-        // Stars
-        Canvas(modifier = Modifier.fillMaxSize()) {
-            repeat(50) { index ->
-                val x = (index * 7.3f) % size.width
-                val y = (index * 11.7f) % size.height
-                val starSize = (index % 3 + 1).toFloat()
-                val starOpacity = 0.3f + (index % 3) * 0.2f
-
-                drawCircle(
-                    color = Color.White.copy(alpha = starOpacity),
-                    radius = starSize,
-                    center = Offset(x, y)
-                )
+                // Main Moon Body Canvas
+                Canvas(
+                    modifier = Modifier
+                        .size(112.dp)
+                        .scale(moonBreathing) // Apply breathing to the moon body directly
+                ) {
+                    rotate(moonRotation) {
+                        // Main moon gradient
+                        drawCircle(
+                            brush = Brush.radialGradient(
+                                colors = listOf(
+                                    Color(0xFFfef08a),
+                                    Color(0xFFfef3c7),
+                                    Color(0xFFfefce8)
+                                ),
+                                center = center,
+                                radius = size.minDimension / 2
+                            ),
+                            radius = size.minDimension / 2
+                        )
+                        // Moon craters (static)
+                        drawCircle(color = Color(0xFFfcd34d).copy(alpha = 0.4f), radius = 12f, center = Offset(20f, 16f))
+                        drawCircle(color = Color(0xFFfcd34d).copy(alpha = 0.35f), radius = 8f, center = Offset(28f, 40f))
+                        drawCircle(color = Color(0xFFfcd34d).copy(alpha = 0.3f), radius = 10f, center = Offset(40f, 32f))
+                        drawCircle(color = Color(0xFFfcd34d).copy(alpha = 0.25f), radius = 6f, center = Offset(32f, 64f))
+                    }
+                }
             }
         }
     }
@@ -214,22 +288,25 @@ fun AnimatedLunarBackground() {
 
 @Composable
 fun AnimatedLogo() {
-    val infiniteTransition = rememberInfiniteTransition(label = "logo")
+    val infiniteTransition = rememberInfiniteTransition(label = "logo_infinite_transition") // Unique label
+    val density = LocalDensity.current // Get density here
 
-    // 1. Initial entrance animation (scale: 0->1, rotate: -180->0)
-    val entranceScale by animateFloatAsState(
-        targetValue = 1f,
-        animationSpec = tween(800, delayMillis = 500),
-        label = "entrance"
-    )
+    // Entrance animation states
+    var scaleState by remember { mutableStateOf(0f) }
+    var rotationState by remember { mutableStateOf(-180f) }
 
-    val entranceRotation by animateFloatAsState(
-        targetValue = 0f,
-        animationSpec = tween(800, delayMillis = 500),
-        label = "entranceRot"
-    )
+    LaunchedEffect(Unit) {
+        animate(0f, 1f, animationSpec = tween(800, delayMillis = 500)) { value, _ ->
+            scaleState = value
+        }
+    }
+    LaunchedEffect(Unit) {
+        animate(-180f, 0f, animationSpec = tween(800, delayMillis = 500)) { value, _ ->
+            rotationState = value
+        }
+    }
 
-    // 2. Floating animation (y: [0, -8, 0])
+    // Continuous animations
     val floatY by infiniteTransition.animateFloat(
         initialValue = 0f,
         targetValue = -8f,
@@ -237,32 +314,29 @@ fun AnimatedLogo() {
             animation = tween(3000, easing = EaseInOut),
             repeatMode = RepeatMode.Reverse
         ),
-        label = "float"
+        label = "logo_floatY"
     )
 
-    // 3. Gentle rotation (rotate: [0, 5, -5, 0])
     val gentleRotation by infiniteTransition.animateFloat(
         initialValue = 0f,
-        targetValue = 10f,
+        targetValue = 10f, // Range from -5 to 5 if reversed, or 0 to 10 and back
         animationSpec = infiniteRepeatable(
             animation = tween(6000, easing = EaseInOut),
             repeatMode = RepeatMode.Reverse
         ),
-        label = "gentleRot"
+        label = "logo_gentleRotation"
     )
 
-    // 4. Container scale breathing (scale: [1, 1.05, 1])
-    val containerScale by infiniteTransition.animateFloat(
+    val containerScaleBreath by infiniteTransition.animateFloat(
         initialValue = 1f,
         targetValue = 1.05f,
         animationSpec = infiniteRepeatable(
             animation = tween(4000, easing = EaseInOut),
             repeatMode = RepeatMode.Reverse
         ),
-        label = "containerScale"
+        label = "logo_containerScaleBreath"
     )
 
-    // 5. Glowing ring rotation (rotate: [0, 360])
     val ringRotation by infiniteTransition.animateFloat(
         initialValue = 0f,
         targetValue = 360f,
@@ -270,10 +344,9 @@ fun AnimatedLogo() {
             animation = tween(8000, easing = LinearEasing),
             repeatMode = RepeatMode.Restart
         ),
-        label = "ringRotation"
+        label = "logo_ringRotation"
     )
 
-    // 6. Ring opacity (opacity: [0.3, 0.7, 0.3])
     val ringOpacity by infiniteTransition.animateFloat(
         initialValue = 0.3f,
         targetValue = 0.7f,
@@ -281,31 +354,58 @@ fun AnimatedLogo() {
             animation = tween(2000, easing = EaseInOut),
             repeatMode = RepeatMode.Reverse
         ),
-        label = "ringOpacity"
+        label = "logo_ringOpacity"
     )
 
-    // 7. Icon rotation (rotate: [0, 360])
-    val iconRotation by infiniteTransition.animateFloat(
+    val iconInternalRotation by infiniteTransition.animateFloat(
         initialValue = 0f,
         targetValue = 360f,
         animationSpec = infiniteRepeatable(
             animation = tween(20000, easing = LinearEasing),
             repeatMode = RepeatMode.Restart
         ),
-        label = "iconRotation"
+        label = "logo_iconInternalRotation"
     )
+
+    // Particle animations
+    val particleAnimations = List(6) { i ->
+        val opacity by infiniteTransition.animateFloat(
+            initialValue = 0f,
+            targetValue = 1f,
+            animationSpec = infiniteRepeatable(
+                animation = tween(3000, delayMillis = i * 500, easing = EaseInOut),
+                repeatMode = RepeatMode.Reverse
+            ),
+            label = "logo_particleOpacity_$i"
+        )
+        val scale by infiniteTransition.animateFloat(
+            initialValue = 0f,
+            targetValue = 1f,
+            animationSpec = infiniteRepeatable(
+                animation = tween(3000, delayMillis = i * 500, easing = EaseInOut),
+                repeatMode = RepeatMode.Reverse
+            ),
+            label = "logo_particleScale_$i"
+        )
+        opacity to scale // Pair of animated values
+    }
+
 
     Box(
         modifier = Modifier
-            .size(200.dp) // Made larger
-            .offset(y = floatY.dp)
-            .scale(entranceScale * containerScale),
+            .size(140.dp)
+            .graphicsLayer( // Apply entrance and continuous animations here
+                scaleX = scaleState * containerScaleBreath,
+                scaleY = scaleState * containerScaleBreath,
+                rotationZ = rotationState + gentleRotation,
+                translationY = with(density) { floatY.dp.toPx() } // Corrected here
+            ),
         contentAlignment = Alignment.Center
     ) {
-        // Glowing ring effect (exact React translation)
+        // Glowing ring effect
         Canvas(
             modifier = Modifier
-                .size(200.dp) // Made larger
+                .size(140.dp) // Ring slightly larger than main logo body
                 .blur(4.dp)
         ) {
             rotate(ringRotation) {
@@ -317,80 +417,61 @@ fun AnimatedLogo() {
                             Color.Transparent
                         ),
                         center = center,
-                        radius = size.minDimension / 2
+                        radius = size.minDimension / 2 // Fills the canvas
                     ),
                     radius = size.minDimension / 2
                 )
             }
         }
 
-        // Main container (exact React styling)
+        // Main container
         Box(
             modifier = Modifier
-                .size(180.dp) // Made larger
+                .size(180.dp) // Actual logo body size
                 .background(
                     color = Color.White.copy(alpha = 0.9f), // bg-white/90
-                    shape = RoundedCornerShape(90.dp)
+                    shape = RoundedCornerShape(90.dp) // Fully rounded
                 )
-                .background(
-                    color = Color.White.copy(alpha = 0.2f), // border-white/20
+                .background( // Simulates border
+                    color = Color.White.copy(alpha = 0.2f),
                     shape = RoundedCornerShape(90.dp)
                 ),
             contentAlignment = Alignment.Center
         ) {
-            // Icon with rotation - Fixed approach using graphicsLayer
             Icon(
-                Icons.Default.ShoppingBag,
+                imageVector = Icons.Default.ShoppingBag,
                 contentDescription = "Logo",
                 modifier = Modifier
-                    .size(80.dp) // Made much larger
+                    .size(80.dp)
                     .graphicsLayer(
-                        rotationZ = iconRotation
+                        rotationZ = iconInternalRotation
                     ),
-                tint = Color(0xFF9333EA) // text-purple-600
+                tint = Color(0xFF9333EA)
             )
         }
 
-        // Floating particles (exact React translation)
-        repeat(6) { i ->
-            val particleAngle = i * 60f
-            val radius = 60f // Made larger
-            val x = (radius * cos(Math.toRadians(particleAngle.toDouble()))).toFloat()
-            val y = (radius * sin(Math.toRadians(particleAngle.toDouble()))).toFloat()
-
-            val particleOpacity by infiniteTransition.animateFloat(
-                initialValue = 0f,
-                targetValue = 1f,
-                animationSpec = infiniteRepeatable(
-                    animation = tween(3000, delayMillis = i * 500, easing = EaseInOut),
-                    repeatMode = RepeatMode.Reverse
-                ),
-                label = "particle$i"
-            )
-
-            val particleScale by infiniteTransition.animateFloat(
-                initialValue = 0f,
-                targetValue = 1f,
-                animationSpec = infiniteRepeatable(
-                    animation = tween(3000, delayMillis = i * 500, easing = EaseInOut),
-                    repeatMode = RepeatMode.Reverse
-                ),
-                label = "particleScale$i"
-            )
+        // Floating particles
+        particleAnimations.forEachIndexed { i, (particleOpacityAnim, particleScaleAnim) ->
+            val particleAngle = i * 60f // Spread particles evenly
+            val radius = 55f // Distance from center, slightly outside main logo
+            // Calculate position based on the center of the 140.dp Box
+            val xOffset = (radius * cos(Math.toRadians(particleAngle.toDouble()))).toFloat()
+            val yOffset = (radius * sin(Math.toRadians(particleAngle.toDouble()))).toFloat()
 
             Canvas(
                 modifier = Modifier
-                    .size(6.dp) // Made larger
-                    .offset(x = x.dp, y = y.dp)
+                    .size(6.dp) // Particle canvas size
+                    .offset(x = xOffset.dp, y = yOffset.dp) // Position relative to parent Box center
             ) {
                 drawCircle(
-                    color = Color.White.copy(alpha = particleOpacity),
-                    radius = 3f * particleScale // Made larger
+                    color = Color.White.copy(alpha = particleOpacityAnim),
+                    radius = with(density) { 3.dp.toPx() * particleScaleAnim } // Corrected here
                 )
             }
         }
     }
 }
+
 
 @Composable
 fun LoginScreen() {
@@ -473,7 +554,7 @@ fun LoginScreen() {
                             value = email,
                             onValueChange = { email = it },
                             label = { Text("Email") },
-                            placeholder = { Text("Enter your email") },
+                            placeholder = { Text("Enter your email", color = Color.White.copy(alpha = 0.5f)) },
                             leadingIcon = {
                                 Icon(
                                     Icons.Default.Email,
@@ -488,7 +569,9 @@ fun LoginScreen() {
                                 focusedLabelColor = Color.White.copy(alpha = 0.9f),
                                 unfocusedLabelColor = Color.White.copy(alpha = 0.9f),
                                 cursorColor = Color.White
+                                // textColor and placeholderColor removed
                             ),
+                            textStyle = LocalTextStyle.current.copy(color = Color.White),
                             keyboardOptions = KeyboardOptions(
                                 keyboardType = KeyboardType.Email,
                                 imeAction = ImeAction.Next
@@ -510,7 +593,7 @@ fun LoginScreen() {
                             value = password,
                             onValueChange = { password = it },
                             label = { Text("Password") },
-                            placeholder = { Text("Enter your password") },
+                            placeholder = { Text("Enter your password", color = Color.White.copy(alpha = 0.5f)) },
                             leadingIcon = {
                                 Icon(
                                     Icons.Default.Lock,
@@ -537,7 +620,9 @@ fun LoginScreen() {
                                 focusedLabelColor = Color.White.copy(alpha = 0.9f),
                                 unfocusedLabelColor = Color.White.copy(alpha = 0.9f),
                                 cursorColor = Color.White
+                                // textColor and placeholderColor removed
                             ),
+                            textStyle = LocalTextStyle.current.copy(color = Color.White),
                             keyboardOptions = KeyboardOptions(
                                 keyboardType = KeyboardType.Password,
                                 imeAction = ImeAction.Done
