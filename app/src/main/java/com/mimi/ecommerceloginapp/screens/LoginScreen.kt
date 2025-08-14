@@ -217,7 +217,9 @@ fun AnimatedLogo() {
 }
 
 @Composable
-fun LoginScreen() {
+fun LoginScreen(
+    onSwitchToSignup: () -> Unit
+) {
     var email by remember { mutableStateOf("") }
     var password by remember { mutableStateOf("") }
     var showPassword by remember { mutableStateOf(false) }
@@ -643,7 +645,7 @@ fun LoginScreen() {
                         fontSize = 14.sp
                     )
                     TextButton(
-                        onClick = { /* Handle sign up */ }
+                        onClick = onSwitchToSignup
                     ) {
                         Text(
                             text = "Sign up",
