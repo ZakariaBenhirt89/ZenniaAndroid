@@ -5,18 +5,19 @@ import androidx.compose.animation.*
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.scale
 import androidx.compose.ui.draw.blur
+import androidx.compose.ui.draw.scale
 import androidx.compose.ui.geometry.Offset
-import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.*
 import androidx.compose.ui.graphics.drawscope.rotate
 import androidx.compose.ui.platform.LocalDensity
@@ -25,283 +26,33 @@ import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.input.VisualTransformation
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
-import kotlin.math.cos
-import kotlin.math.sin
-import kotlin.random.Random
-import androidx.compose.foundation.layout.BoxWithConstraints
-import androidx.compose.ui.graphics.graphicsLayer
-
-// StarData class to hold individual star properties
-private data class StarData(
-    val id: Int,
-    val initialX: Float,
-    val initialY: Float,
-    val size: Float,
-    val baseOpacity: Float,
-    val speed: Float,
-    val angle: Float // Angle in degrees for movement direction
-)
-
-@Composable
-fun AnimatedLunarBackground() {
-    val infiniteTransition = rememberInfiniteTransition(label = "lunar_bg_transition")
-
-    // Moon orbital animation
-    val moonX by infiniteTransition.animateFloat(
-        initialValue = 0.8f,
-        targetValue = 0.2f,
-        animationSpec = infiniteRepeatable(
-            animation = tween(30000, easing = EaseInOut),
-            repeatMode = RepeatMode.Reverse
-        ),
-        label = "moonX_lunar"
-    )
-
-    val moonY by infiniteTransition.animateFloat(
-        initialValue = 0.1f,
-        targetValue = 0.25f,
-        animationSpec = infiniteRepeatable(
-            animation = tween(30000, easing = EaseInOut),
-            repeatMode = RepeatMode.Reverse
-        ),
-        label = "moonY_lunar"
-    )
-
-    val moonOverallOpacity by infiniteTransition.animateFloat(
-        initialValue = 0f,
-        targetValue = 1f,
-        animationSpec = infiniteRepeatable(
-            animation = tween(30000, easing = EaseInOut),
-            repeatMode = RepeatMode.Reverse
-        ),
-        label = "moonOverallOpacity_lunar"
-    )
-
-    val moonOverallScale by infiniteTransition.animateFloat(
-        initialValue = 0f,
-        targetValue = 1.1f,
-        animationSpec = infiniteRepeatable(
-            animation = tween(30000, easing = EaseInOut),
-            repeatMode = RepeatMode.Reverse
-        ),
-        label = "moonOverallScale_lunar"
-    )
-
-    // Moon glow effect
-    val moonGlowIntensity by infiniteTransition.animateFloat(
-        initialValue = 0.3f,
-        targetValue = 0.5f,
-        animationSpec = infiniteRepeatable(
-            animation = tween(8000, easing = EaseInOut),
-            repeatMode = RepeatMode.Reverse
-        ),
-        label = "moonGlow_lunar"
-    )
-
-    // Moon rotation
-    val moonRotation by infiniteTransition.animateFloat(
-        initialValue = 0f,
-        targetValue = 360f,
-        animationSpec = infiniteRepeatable(
-            animation = tween(25000, easing = LinearEasing),
-            repeatMode = RepeatMode.Restart
-        ),
-        label = "moonRotation_lunar"
-    )
-
-    // Moon breathing scale (applied to moon body)
-    val moonBreathing by infiniteTransition.animateFloat(
-        initialValue = 1f,
-        targetValue = 1.02f,
-        animationSpec = infiniteRepeatable(
-            animation = tween(6000, easing = EaseInOut),
-            repeatMode = RepeatMode.Reverse
-        ),
-        label = "moonBreathing_lunar"
-    )
-
-    Box(modifier = Modifier.fillMaxSize()) {
-        // Gradient Background
-        Canvas(modifier = Modifier.fillMaxSize()) {
-            val gradient = Brush.verticalGradient(
-                colors = listOf(
-                    Color(0xFF1e1b4b), // indigo-950
-                    Color(0xFF581c87), // purple-900
-                    Color(0xFF0f172a)  // slate-900
-                )
-            )
-            drawRect(brush = gradient)
-        }
-
-        // --- Modified Stars Section ---
-        val starInfiniteTransition = rememberInfiniteTransition(label = "stars_transition")
-        val starOffset by starInfiniteTransition.animateFloat(
-            initialValue = 0f,
-            targetValue = 1000f,
-            animationSpec = infiniteRepeatable(
-                animation = tween(60000, easing = LinearEasing), // Slower, longer cycle
-                repeatMode = RepeatMode.Restart
-            ),
-            label = "star_offset"
-        )
-
-        val starTwinkleAlpha by starInfiniteTransition.animateFloat(
-            initialValue = 0.6f,
-            targetValue = 1.0f,
-            animationSpec = infiniteRepeatable(
-                animation = tween(2500, easing = EaseInOut),
-                repeatMode = RepeatMode.Reverse
-            ),
-            label = "star_twinkle_alpha"
-        )
-
-        var stars by remember { mutableStateOf<List<StarData>>(emptyList()) }
-        var canvasSizeForStars by remember { mutableStateOf(Size.Zero) }
-
-        Canvas(modifier = Modifier.fillMaxSize()) {
-            if (canvasSizeForStars != size) {
-                canvasSizeForStars = size
-                val starCount = 100
-                val starMinSize = 0.5f
-                val starMaxSize = 2.5f
-                val starMinSpeed = 0.02f
-                val starMaxSpeed = 0.1f
-
-                stars = List(starCount) { index ->
-                    StarData(
-                        id = index,
-                        initialX = Random.nextFloat() * size.width,
-                        initialY = Random.nextFloat() * size.height,
-                        size = starMinSize + Random.nextFloat() * (starMaxSize - starMinSize),
-                        baseOpacity = 0.4f + Random.nextFloat() * 0.6f,
-                        speed = starMinSpeed + Random.nextFloat() * (starMaxSpeed - starMinSpeed),
-                        angle = Random.nextFloat() * 360f
-                    )
-                }
-            }
-
-            stars.forEach { star ->
-                val dx = cos(Math.toRadians(star.angle.toDouble())).toFloat()
-                val dy = sin(Math.toRadians(star.angle.toDouble())).toFloat()
-
-                val animatedX = (star.initialX + starOffset * star.speed * dx).let {
-                    (it % size.width + size.width) % size.width
-                }
-                val animatedY = (star.initialY + starOffset * star.speed * dy).let {
-                    (it % size.height + size.height) % size.height
-                }
-
-                val currentStarOpacity = (star.baseOpacity * starTwinkleAlpha).coerceIn(0f, 1f)
-                val glowRadius = star.size * 2.5f
-
-                // Draw Glow
-                drawCircle(
-                    brush = Brush.radialGradient(
-                        colors = listOf(
-                            Color.White.copy(alpha = currentStarOpacity * 0.5f),
-                            Color.Transparent
-                        ),
-                        center = Offset(animatedX, animatedY),
-                        radius = glowRadius
-                    ),
-                    radius = glowRadius,
-                    center = Offset(animatedX, animatedY)
-                )
-
-                // Draw Star
-                drawCircle(
-                    color = Color.White.copy(alpha = currentStarOpacity),
-                    radius = star.size,
-                    center = Offset(animatedX, animatedY)
-                )
-            }
-        }
-        // --- End of Modified Stars Section ---
-
-        // Moon with orbital movement
-        BoxWithConstraints(modifier = Modifier.fillMaxSize()) {
-            val screenWidth = maxWidth
-            val screenHeight = maxHeight
-            Box(
-                modifier = Modifier
-                    //.fillMaxSize() // This Box is for the moon's positioning context
-                    .offset(x = screenWidth * moonX, y = screenHeight * moonY)
-                    .graphicsLayer( // Apply opacity and scale to the whole moon group
-                        alpha = moonOverallOpacity,
-                        scaleX = moonOverallScale,
-                        scaleY = moonOverallScale
-                    )
-            ) {
-                // Moon Glow Effect Canvas
-                Canvas(
-                    modifier = Modifier
-                        .size(112.dp)
-                        .blur(2.dp)
-                        .scale(1.3f) // This scale is part of the glow visual, distinct from moonOverallScale
-                ) {
-                    drawCircle(
-                        brush = Brush.radialGradient(
-                            colors = listOf(
-                                Color(0xFFfef08a).copy(alpha = moonGlowIntensity),
-                                Color(0xFFfef3c7).copy(alpha = moonGlowIntensity * 0.5f),
-                                Color.Transparent
-                            ),
-                            center = center,
-                            radius = size.minDimension / 2
-                        ),
-                        radius = size.minDimension / 2
-                    )
-                }
-
-                // Main Moon Body Canvas
-                Canvas(
-                    modifier = Modifier
-                        .size(112.dp)
-                        .scale(moonBreathing) // Apply breathing to the moon body directly
-                ) {
-                    rotate(moonRotation) {
-                        // Main moon gradient
-                        drawCircle(
-                            brush = Brush.radialGradient(
-                                colors = listOf(
-                                    Color(0xFFfef08a),
-                                    Color(0xFFfef3c7),
-                                    Color(0xFFfefce8)
-                                ),
-                                center = center,
-                                radius = size.minDimension / 2
-                            ),
-                            radius = size.minDimension / 2
-                        )
-                        // Moon craters (static)
-                        drawCircle(color = Color(0xFFfcd34d).copy(alpha = 0.4f), radius = 12f, center = Offset(20f, 16f))
-                        drawCircle(color = Color(0xFFfcd34d).copy(alpha = 0.35f), radius = 8f, center = Offset(28f, 40f))
-                        drawCircle(color = Color(0xFFfcd34d).copy(alpha = 0.3f), radius = 10f, center = Offset(40f, 32f))
-                        drawCircle(color = Color(0xFFfcd34d).copy(alpha = 0.25f), radius = 6f, center = Offset(32f, 64f))
-                    }
-                }
-            }
-        }
-    }
-}
+import androidx.compose.ui.unit.sp
+import com.mimi.ecommerceloginapp.components.AnimatedBackground
+import kotlin.math.*
 
 @Composable
 fun AnimatedLogo() {
-    val infiniteTransition = rememberInfiniteTransition(label = "logo_infinite_transition") // Unique label
-    val density = LocalDensity.current // Get density here
+    val infiniteTransition = rememberInfiniteTransition(label = "logo")
+    val density = LocalDensity.current
 
-    // Entrance animation states
+    // Entrance animations
     var scaleState by remember { mutableStateOf(0f) }
     var rotationState by remember { mutableStateOf(-180f) }
+    var isVisible by remember { mutableStateOf(false) }
 
     LaunchedEffect(Unit) {
-        animate(0f, 1f, animationSpec = tween(800, delayMillis = 500)) { value, _ ->
+        kotlinx.coroutines.delay(500) // Initial delay like React
+        isVisible = true
+        animate(0f, 1f, animationSpec = tween(800)) { value, _ ->
             scaleState = value
         }
     }
+
     LaunchedEffect(Unit) {
-        animate(-180f, 0f, animationSpec = tween(800, delayMillis = 500)) { value, _ ->
+        kotlinx.coroutines.delay(500)
+        animate(-180f, 0f, animationSpec = tween(800)) { value, _ ->
             rotationState = value
         }
     }
@@ -314,27 +65,27 @@ fun AnimatedLogo() {
             animation = tween(3000, easing = EaseInOut),
             repeatMode = RepeatMode.Reverse
         ),
-        label = "logo_floatY"
+        label = "float_y"
     )
 
     val gentleRotation by infiniteTransition.animateFloat(
         initialValue = 0f,
-        targetValue = 10f, // Range from -5 to 5 if reversed, or 0 to 10 and back
+        targetValue = 5f,
         animationSpec = infiniteRepeatable(
             animation = tween(6000, easing = EaseInOut),
             repeatMode = RepeatMode.Reverse
         ),
-        label = "logo_gentleRotation"
+        label = "gentle_rotation"
     )
 
-    val containerScaleBreath by infiniteTransition.animateFloat(
+    val containerScale by infiniteTransition.animateFloat(
         initialValue = 1f,
         targetValue = 1.05f,
         animationSpec = infiniteRepeatable(
             animation = tween(4000, easing = EaseInOut),
             repeatMode = RepeatMode.Reverse
         ),
-        label = "logo_containerScaleBreath"
+        label = "container_scale"
     )
 
     val ringRotation by infiniteTransition.animateFloat(
@@ -344,7 +95,7 @@ fun AnimatedLogo() {
             animation = tween(8000, easing = LinearEasing),
             repeatMode = RepeatMode.Restart
         ),
-        label = "logo_ringRotation"
+        label = "ring_rotation"
     )
 
     val ringOpacity by infiniteTransition.animateFloat(
@@ -354,181 +105,185 @@ fun AnimatedLogo() {
             animation = tween(2000, easing = EaseInOut),
             repeatMode = RepeatMode.Reverse
         ),
-        label = "logo_ringOpacity"
+        label = "ring_opacity"
     )
 
-    val iconInternalRotation by infiniteTransition.animateFloat(
+    val iconRotation by infiniteTransition.animateFloat(
         initialValue = 0f,
         targetValue = 360f,
         animationSpec = infiniteRepeatable(
             animation = tween(20000, easing = LinearEasing),
             repeatMode = RepeatMode.Restart
         ),
-        label = "logo_iconInternalRotation"
+        label = "icon_rotation"
     )
 
-    // Particle animations
-    val particleAnimations = List(6) { i ->
-        val opacity by infiniteTransition.animateFloat(
-            initialValue = 0f,
-            targetValue = 1f,
-            animationSpec = infiniteRepeatable(
-                animation = tween(3000, delayMillis = i * 500, easing = EaseInOut),
-                repeatMode = RepeatMode.Reverse
-            ),
-            label = "logo_particleOpacity_$i"
-        )
-        val scale by infiniteTransition.animateFloat(
-            initialValue = 0f,
-            targetValue = 1f,
-            animationSpec = infiniteRepeatable(
-                animation = tween(3000, delayMillis = i * 500, easing = EaseInOut),
-                repeatMode = RepeatMode.Reverse
-            ),
-            label = "logo_particleScale_$i"
-        )
-        opacity to scale // Pair of animated values
-    }
-
-
-    Box(
-        modifier = Modifier
-            .size(140.dp)
-            .graphicsLayer( // Apply entrance and continuous animations here
-                scaleX = scaleState * containerScaleBreath,
-                scaleY = scaleState * containerScaleBreath,
-                rotationZ = rotationState + gentleRotation,
-                translationY = with(density) { floatY.dp.toPx() } // Corrected here
-            ),
-        contentAlignment = Alignment.Center
-    ) {
-        // Glowing ring effect
-        Canvas(
-            modifier = Modifier
-                .size(140.dp) // Ring slightly larger than main logo body
-                .blur(4.dp)
-        ) {
-            rotate(ringRotation) {
-                drawCircle(
-                    brush = Brush.radialGradient(
-                        colors = listOf(
-                            Color(0xFF9333EA).copy(alpha = ringOpacity), // purple-400
-                            Color(0xFF3B82F6).copy(alpha = ringOpacity * 0.5f), // blue-400
-                            Color.Transparent
-                        ),
-                        center = center,
-                        radius = size.minDimension / 2 // Fills the canvas
-                    ),
-                    radius = size.minDimension / 2
-                )
-            }
-        }
-
-        // Main container
+    if (isVisible) {
         Box(
             modifier = Modifier
-                .size(180.dp) // Actual logo body size
-                .background(
-                    color = Color.White.copy(alpha = 0.9f), // bg-white/90
-                    shape = RoundedCornerShape(90.dp) // Fully rounded
-                )
-                .background( // Simulates border
-                    color = Color.White.copy(alpha = 0.2f),
-                    shape = RoundedCornerShape(90.dp)
+                .size(100.dp)
+                .graphicsLayer(
+                    scaleX = scaleState * containerScale,
+                    scaleY = scaleState * containerScale,
+                    rotationZ = rotationState + gentleRotation,
+                    translationY = with(density) { floatY.dp.toPx() }
                 ),
             contentAlignment = Alignment.Center
         ) {
-            Icon(
-                imageVector = Icons.Default.ShoppingBag,
-                contentDescription = "Logo",
-                modifier = Modifier
-                    .size(80.dp)
-                    .graphicsLayer(
-                        rotationZ = iconInternalRotation
-                    ),
-                tint = Color(0xFF9333EA)
-            )
-        }
-
-        // Floating particles
-        particleAnimations.forEachIndexed { i, (particleOpacityAnim, particleScaleAnim) ->
-            val particleAngle = i * 60f // Spread particles evenly
-            val radius = 55f // Distance from center, slightly outside main logo
-            // Calculate position based on the center of the 140.dp Box
-            val xOffset = (radius * cos(Math.toRadians(particleAngle.toDouble()))).toFloat()
-            val yOffset = (radius * sin(Math.toRadians(particleAngle.toDouble()))).toFloat()
-
+            // Glowing ring effect (matches React's glowing ring)
             Canvas(
                 modifier = Modifier
-                    .size(6.dp) // Particle canvas size
-                    .offset(x = xOffset.dp, y = yOffset.dp) // Position relative to parent Box center
+                    .size(120.dp)
+                    .blur(4.dp)
+                    .scale(1.1f)
             ) {
-                drawCircle(
-                    color = Color.White.copy(alpha = particleOpacityAnim),
-                    radius = with(density) { 3.dp.toPx() * particleScaleAnim } // Corrected here
+                rotate(ringRotation) {
+                    drawCircle(
+                        brush = Brush.radialGradient(
+                            colors = listOf(
+                                Color(0xFF9333EA).copy(alpha = ringOpacity),
+                                Color(0xFF3B82F6).copy(alpha = ringOpacity * 0.5f),
+                                Color.Transparent
+                            ),
+                            center = center,
+                            radius = size.minDimension / 2
+                        ),
+                        radius = size.minDimension / 2
+                    )
+                }
+            }
+
+            // Main container with glass morphism effect
+            Box(
+                modifier = Modifier
+                    .size(80.dp)
+                    .background(
+                        color = Color.White.copy(alpha = 0.9f),
+                        shape = RoundedCornerShape(40.dp)
+                    ),
+                contentAlignment = Alignment.Center
+            ) {
+                Icon(
+                    imageVector = Icons.Default.ShoppingBag,
+                    contentDescription = "Logo",
+                    modifier = Modifier
+                        .size(32.dp)
+                        .graphicsLayer(rotationZ = iconRotation),
+                    tint = Color(0xFF9333EA) // purple-600
+                )
+            }
+
+            // Floating particles around logo (matches React's 6 particles)
+            repeat(6) { i ->
+                val particleAngle = i * 60f
+                val radius = 50f
+                
+                val particleOpacity by infiniteTransition.animateFloat(
+                    initialValue = 0f,
+                    targetValue = 1f,
+                    animationSpec = infiniteRepeatable(
+                        animation = tween(3000, delayMillis = i * 500, easing = EaseInOut),
+                        repeatMode = RepeatMode.Reverse
+                    ),
+                    label = "particle_opacity_$i"
+                )
+                
+                val particleScale by infiniteTransition.animateFloat(
+                    initialValue = 0f,
+                    targetValue = 1f,
+                    animationSpec = infiniteRepeatable(
+                        animation = tween(3000, delayMillis = i * 500, easing = EaseInOut),
+                        repeatMode = RepeatMode.Reverse
+                    ),
+                    label = "particle_scale_$i"
+                )
+
+                val xOffset = radius * cos(Math.toRadians(particleAngle.toDouble())).toFloat()
+                val yOffset = radius * sin(Math.toRadians(particleAngle.toDouble())).toFloat()
+
+                Box(
+                    modifier = Modifier
+                        .offset(x = xOffset.dp, y = yOffset.dp)
+                        .size(4.dp)
+                        .background(
+                            color = Color.White.copy(alpha = particleOpacity),
+                            shape = RoundedCornerShape(2.dp)
+                        )
+                        .scale(particleScale)
                 )
             }
         }
     }
 }
 
-
 @Composable
 fun LoginScreen() {
     var email by remember { mutableStateOf("") }
     var password by remember { mutableStateOf("") }
     var showPassword by remember { mutableStateOf(false) }
+    var rememberMe by remember { mutableStateOf(false) }
 
     Box(modifier = Modifier.fillMaxSize()) {
-        // Lunar Background
-        AnimatedLunarBackground()
+        // Animated Background
+        AnimatedBackground()
 
-        // Login Content
+        // Content Overlay
         Column(
             modifier = Modifier
                 .fillMaxSize()
-                .padding(24.dp),
+                .padding(24.dp)
+                .verticalScroll(rememberScrollState()),
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.Center
         ) {
-            // Logo section - ALWAYS VISIBLE with animations
-            Column(
-                horizontalAlignment = Alignment.CenterHorizontally
+            // Header with Logo
+            AnimatedVisibility(
+                visible = true,
+                enter = fadeIn(animationSpec = tween(800, delayMillis = 200)) +
+                        slideInVertically(
+                            animationSpec = tween(800, delayMillis = 200),
+                            initialOffsetY = { 20 }
+                        )
             ) {
-                AnimatedLogo() // Always visible with continuous animations
-
-                Spacer(modifier = Modifier.height(16.dp))
-
-                // Title (exact React timing)
-                AnimatedVisibility(
-                    visible = true,
-                    enter = fadeIn(animationSpec = tween(800, delayMillis = 800))
+                Column(
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                    modifier = Modifier.padding(bottom = 32.dp)
                 ) {
-                    Text(
-                        text = "Welcome Back",
-                        style = MaterialTheme.typography.headlineLarge,
-                        color = Color.White,
-                        fontWeight = FontWeight.Medium
-                    )
-                }
+                    AnimatedLogo()
 
-                // Subtitle (exact React timing)
-                AnimatedVisibility(
-                    visible = true,
-                    enter = fadeIn(animationSpec = tween(800, delayMillis = 1000))
-                ) {
-                    Text(
-                        text = "Sign in to your account to continue shopping",
-                        style = MaterialTheme.typography.bodyLarge,
-                        color = Color.White.copy(alpha = 0.8f),
-                        modifier = Modifier.padding(top = 8.dp)
-                    )
+                    Spacer(modifier = Modifier.height(16.dp))
+
+                    // Welcome Text
+                    AnimatedVisibility(
+                        visible = true,
+                        enter = fadeIn(animationSpec = tween(800, delayMillis = 800))
+                    ) {
+                        Text(
+                            text = "Welcome Back",
+                            fontSize = 28.sp,
+                            fontWeight = FontWeight.Medium,
+                            color = Color.White,
+                            textAlign = TextAlign.Center
+                        )
+                    }
+
+                    // Subtitle
+                    AnimatedVisibility(
+                        visible = true,
+                        enter = fadeIn(animationSpec = tween(800, delayMillis = 1000))
+                    ) {
+                        Text(
+                            text = "Sign in to your account to continue shopping",
+                            fontSize = 16.sp,
+                            color = Color.White.copy(alpha = 0.8f),
+                            textAlign = TextAlign.Center,
+                            modifier = Modifier.padding(top = 8.dp)
+                        )
+                    }
                 }
             }
 
-            Spacer(modifier = Modifier.height(48.dp))
-
-            // Form (exact React timing)
+            // Login Form
             AnimatedVisibility(
                 visible = true,
                 enter = fadeIn(animationSpec = tween(800, delayMillis = 400)) +
@@ -541,7 +296,7 @@ fun LoginScreen() {
                     modifier = Modifier.fillMaxWidth(),
                     verticalArrangement = Arrangement.spacedBy(16.dp)
                 ) {
-                    // Email field (exact React timing)
+                    // Email Field
                     AnimatedVisibility(
                         visible = true,
                         enter = fadeIn(animationSpec = tween(800, delayMillis = 1200)) +
@@ -553,8 +308,18 @@ fun LoginScreen() {
                         OutlinedTextField(
                             value = email,
                             onValueChange = { email = it },
-                            label = { Text("Email") },
-                            placeholder = { Text("Enter your email", color = Color.White.copy(alpha = 0.5f)) },
+                            label = { 
+                                Text(
+                                    "Email", 
+                                    color = Color.White.copy(alpha = 0.9f)
+                                ) 
+                            },
+                            placeholder = { 
+                                Text(
+                                    "Enter your email", 
+                                    color = Color.White.copy(alpha = 0.5f)
+                                ) 
+                            },
                             leadingIcon = {
                                 Icon(
                                     Icons.Default.Email,
@@ -562,16 +327,19 @@ fun LoginScreen() {
                                     tint = Color.Gray.copy(alpha = 0.4f)
                                 )
                             },
-                            modifier = Modifier.fillMaxWidth(),
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .background(
+                                    color = Color.White.copy(alpha = 0.1f),
+                                    shape = RoundedCornerShape(12.dp)
+                                ),
                             colors = OutlinedTextFieldDefaults.colors(
                                 focusedBorderColor = Color.White.copy(alpha = 0.2f),
                                 unfocusedBorderColor = Color.White.copy(alpha = 0.2f),
-                                focusedLabelColor = Color.White.copy(alpha = 0.9f),
-                                unfocusedLabelColor = Color.White.copy(alpha = 0.9f),
-                                cursorColor = Color.White
-                                // textColor and placeholderColor removed
+                                cursorColor = Color.White,
+                                focusedTextColor = Color.White,
+                                unfocusedTextColor = Color.White
                             ),
-                            textStyle = LocalTextStyle.current.copy(color = Color.White),
                             keyboardOptions = KeyboardOptions(
                                 keyboardType = KeyboardType.Email,
                                 imeAction = ImeAction.Next
@@ -580,7 +348,7 @@ fun LoginScreen() {
                         )
                     }
 
-                    // Password field (exact React timing)
+                    // Password Field
                     AnimatedVisibility(
                         visible = true,
                         enter = fadeIn(animationSpec = tween(800, delayMillis = 1400)) +
@@ -592,8 +360,18 @@ fun LoginScreen() {
                         OutlinedTextField(
                             value = password,
                             onValueChange = { password = it },
-                            label = { Text("Password") },
-                            placeholder = { Text("Enter your password", color = Color.White.copy(alpha = 0.5f)) },
+                            label = { 
+                                Text(
+                                    "Password", 
+                                    color = Color.White.copy(alpha = 0.9f)
+                                ) 
+                            },
+                            placeholder = { 
+                                Text(
+                                    "Enter your password", 
+                                    color = Color.White.copy(alpha = 0.5f)
+                                ) 
+                            },
                             leadingIcon = {
                                 Icon(
                                     Icons.Default.Lock,
@@ -613,16 +391,19 @@ fun LoginScreen() {
                                 }
                             },
                             visualTransformation = if (showPassword) VisualTransformation.None else PasswordVisualTransformation(),
-                            modifier = Modifier.fillMaxWidth(),
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .background(
+                                    color = Color.White.copy(alpha = 0.1f),
+                                    shape = RoundedCornerShape(12.dp)
+                                ),
                             colors = OutlinedTextFieldDefaults.colors(
                                 focusedBorderColor = Color.White.copy(alpha = 0.2f),
                                 unfocusedBorderColor = Color.White.copy(alpha = 0.2f),
-                                focusedLabelColor = Color.White.copy(alpha = 0.9f),
-                                unfocusedLabelColor = Color.White.copy(alpha = 0.9f),
-                                cursorColor = Color.White
-                                // textColor and placeholderColor removed
+                                cursorColor = Color.White,
+                                focusedTextColor = Color.White,
+                                unfocusedTextColor = Color.White
                             ),
-                            textStyle = LocalTextStyle.current.copy(color = Color.White),
                             keyboardOptions = KeyboardOptions(
                                 keyboardType = KeyboardType.Password,
                                 imeAction = ImeAction.Done
@@ -631,12 +412,54 @@ fun LoginScreen() {
                         )
                     }
 
-                    // Login button (exact React timing)
+                    // Remember Me & Forgot Password
                     AnimatedVisibility(
                         visible = true,
-                        enter = fadeIn(animationSpec = tween(800, delayMillis = 1600)) +
+                        enter = fadeIn(animationSpec = tween(800, delayMillis = 1600))
+                    ) {
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Row(
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Checkbox(
+                                    checked = rememberMe,
+                                    onCheckedChange = { rememberMe = it },
+                                    colors = CheckboxDefaults.colors(
+                                        checkedColor = Color.White,
+                                        uncheckedColor = Color.White.copy(alpha = 0.3f),
+                                        checkmarkColor = Color(0xFF9333EA)
+                                    )
+                                )
+                                Spacer(modifier = Modifier.width(8.dp))
+                                Text(
+                                    text = "Remember me",
+                                    color = Color.White.copy(alpha = 0.8f),
+                                    fontSize = 14.sp
+                                )
+                            }
+                            
+                            TextButton(
+                                onClick = { /* Handle forgot password */ }
+                            ) {
+                                Text(
+                                    text = "Forgot password?",
+                                    color = Color(0xFF93C5FD), // blue-200
+                                    fontSize = 14.sp
+                                )
+                            }
+                        }
+                    }
+
+                    // Login Button
+                    AnimatedVisibility(
+                        visible = true,
+                        enter = fadeIn(animationSpec = tween(800, delayMillis = 1800)) +
                                 slideInVertically(
-                                    animationSpec = tween(800, delayMillis = 1600),
+                                    animationSpec = tween(800, delayMillis = 1800),
                                     initialOffsetY = { 20 }
                                 )
                     ) {
@@ -646,21 +469,209 @@ fun LoginScreen() {
                             },
                             modifier = Modifier
                                 .fillMaxWidth()
-                                .height(56.dp),
+                                .height(56.dp)
+                                .graphicsLayer {
+                                    // Hover effect simulation
+                                    scaleX = 1f
+                                    scaleY = 1f
+                                },
                             colors = ButtonDefaults.buttonColors(
-                                containerColor = Color.White
+                                containerColor = Color.Transparent
                             ),
                             shape = RoundedCornerShape(12.dp)
                         ) {
+                            Box(
+                                modifier = Modifier
+                                    .fillMaxSize()
+                                    .background(
+                                        brush = Brush.linearGradient(
+                                            colors = listOf(
+                                                Color(0xFF9333EA), // purple-600
+                                                Color(0xFF3B82F6)  // blue-600
+                                            )
+                                        ),
+                                        shape = RoundedCornerShape(12.dp)
+                                    ),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Text(
+                                    text = "Sign In",
+                                    color = Color.White,
+                                    fontSize = 16.sp,
+                                    fontWeight = FontWeight.SemiBold
+                                )
+                            }
+                        }
+                    }
+                }
+            }
+
+            // Divider
+            AnimatedVisibility(
+                visible = true,
+                enter = fadeIn(animationSpec = tween(800, delayMillis = 2000))
+            ) {
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(vertical = 24.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Divider(
+                        modifier = Modifier.weight(1f),
+                        color = Color.White.copy(alpha = 0.2f)
+                    )
+                    Text(
+                        text = "Or continue with",
+                        color = Color.White.copy(alpha = 0.7f),
+                        fontSize = 14.sp,
+                        modifier = Modifier.padding(horizontal = 16.dp)
+                    )
+                    Divider(
+                        modifier = Modifier.weight(1f),
+                        color = Color.White.copy(alpha = 0.2f)
+                    )
+                }
+            }
+
+            // Social Login Buttons
+            AnimatedVisibility(
+                visible = true,
+                enter = fadeIn(animationSpec = tween(800, delayMillis = 2200)) +
+                        slideInVertically(
+                            animationSpec = tween(800, delayMillis = 2200),
+                            initialOffsetY = { 20 }
+                        )
+            ) {
+                Column(
+                    modifier = Modifier.fillMaxWidth(),
+                    verticalArrangement = Arrangement.spacedBy(12.dp)
+                ) {
+                    // Google Button
+                    OutlinedButton(
+                        onClick = { /* Handle Google login */ },
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(56.dp)
+                            .background(
+                                color = Color.White.copy(alpha = 0.1f),
+                                shape = RoundedCornerShape(12.dp)
+                            ),
+                        colors = ButtonDefaults.outlinedButtonColors(
+                            contentColor = Color.White
+                        ),
+                        border = androidx.compose.foundation.BorderStroke(
+                            1.dp, 
+                            Color.White.copy(alpha = 0.2f)
+                        ),
+                        shape = RoundedCornerShape(12.dp)
+                    ) {
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            // Google Icon (simplified)
+                            Canvas(modifier = Modifier.size(20.dp)) {
+                                drawCircle(
+                                    color = Color.White,
+                                    radius = size.minDimension / 2
+                                )
+                                drawCircle(
+                                    color = Color(0xFF4285F4),
+                                    radius = size.minDimension / 3,
+                                    center = center
+                                )
+                            }
+                            Spacer(modifier = Modifier.width(12.dp))
                             Text(
-                                text = "Sign In",
-                                color = Color(0xFF667eea),
-                                style = MaterialTheme.typography.bodyLarge,
-                                fontWeight = FontWeight.SemiBold
+                                text = "Continue with Google",
+                                fontSize = 16.sp
+                            )
+                        }
+                    }
+
+                    // Apple Button
+                    OutlinedButton(
+                        onClick = { /* Handle Apple login */ },
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(56.dp)
+                            .background(
+                                color = Color.White.copy(alpha = 0.1f),
+                                shape = RoundedCornerShape(12.dp)
+                            ),
+                        colors = ButtonDefaults.outlinedButtonColors(
+                            contentColor = Color.White
+                        ),
+                        border = androidx.compose.foundation.BorderStroke(
+                            1.dp, 
+                            Color.White.copy(alpha = 0.2f)
+                        ),
+                        shape = RoundedCornerShape(12.dp)
+                    ) {
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            // Apple Icon (simplified)
+                            Icon(
+                                imageVector = Icons.Default.Phone, // Using phone icon as placeholder
+                                contentDescription = "Apple",
+                                modifier = Modifier.size(20.dp),
+                                tint = Color.White
+                            )
+                            Spacer(modifier = Modifier.width(12.dp))
+                            Text(
+                                text = "Continue with Apple",
+                                fontSize = 16.sp
                             )
                         }
                     }
                 }
+            }
+
+            // Sign Up Link
+            AnimatedVisibility(
+                visible = true,
+                enter = fadeIn(animationSpec = tween(800, delayMillis = 2400))
+            ) {
+                Row(
+                    modifier = Modifier.padding(top = 32.dp),
+                    horizontalArrangement = Arrangement.Center
+                ) {
+                    Text(
+                        text = "Don't have an account? ",
+                        color = Color.White.copy(alpha = 0.7f),
+                        fontSize = 14.sp
+                    )
+                    TextButton(
+                        onClick = { /* Handle sign up */ }
+                    ) {
+                        Text(
+                            text = "Sign up",
+                            color = Color(0xFF93C5FD), // blue-200
+                            fontSize = 14.sp,
+                            fontWeight = FontWeight.Medium
+                        )
+                    }
+                }
+            }
+        }
+
+        // Footer
+        AnimatedVisibility(
+            visible = true,
+            enter = fadeIn(animationSpec = tween(800, delayMillis = 2600)),
+            modifier = Modifier.align(Alignment.BottomCenter)
+        ) {
+            Column(
+                modifier = Modifier.padding(24.dp),
+                horizontalAlignment = Alignment.CenterHorizontally
+            ) {
+                Text(
+                    text = "By signing in, you agree to our Terms of Service and Privacy Policy",
+                    color = Color.White.copy(alpha = 0.6f),
+                    fontSize = 12.sp,
+                    textAlign = TextAlign.Center
+                )
             }
         }
     }
