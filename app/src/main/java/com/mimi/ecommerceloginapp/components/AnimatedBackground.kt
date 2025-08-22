@@ -222,8 +222,8 @@ fun AnimatedBackground() {
                 val starX = size.width * star.x / 100f
                 val starY = size.height * star.y / 100f
                 
-                val animatedOpacity = star.opacity * 
-                    (0.5f + 0.5f * sin((System.currentTimeMillis() / (star.duration * 1000f)) % (2f * PI)).toFloat())
+                val animatedOpacity = (star.opacity * 
+                    (0.5f + 0.5f * sin((System.currentTimeMillis() / (star.duration * 1000f)) % (2f * PI)).toFloat())).coerceIn(0f, 1f)
                 
                 drawCircle(
                     color = Color.White.copy(alpha = animatedOpacity),
@@ -240,7 +240,7 @@ fun AnimatedBackground() {
                 
                 val animatedY = particleY + sin(time * 2f + particle.id) * 100f
                 val animatedX = particleX + cos(time + particle.id) * 25f
-                val animatedOpacity = 0.3f + 0.3f * sin(time * 3f + particle.id)
+                val animatedOpacity = (0.3f + 0.3f * sin(time * 3f + particle.id)).coerceIn(0f, 1f)
                 
                 drawCircle(
                     color = Color(0xFF93C5FD).copy(alpha = animatedOpacity), // blue-200
@@ -353,7 +353,7 @@ fun AnimatedBackground() {
                             
                             drawCircle(
                                 color = Color(0xFFfcd34d).copy(
-                                    alpha = 0.3f + 0.3f * sin(craterTime)
+                                    alpha = (0.3f + 0.3f * sin(craterTime)).coerceIn(0f, 1f)
                                 ),
                                 radius = 6f * (0.8f + 0.3f * sin(craterTime)),
                                 center = center + Offset(-16f, -20f)
@@ -361,7 +361,7 @@ fun AnimatedBackground() {
                             
                             drawCircle(
                                 color = Color(0xFFfcd34d).copy(
-                                    alpha = 0.25f + 0.25f * sin(craterTime + 1f)
+                                    alpha = (0.25f + 0.25f * sin(craterTime + 1f)).coerceIn(0f, 1f)
                                 ),
                                 radius = 4f * (0.9f + 0.3f * sin(craterTime + 1f)),
                                 center = center + Offset(12f, -8f)
@@ -369,7 +369,7 @@ fun AnimatedBackground() {
                             
                             drawCircle(
                                 color = Color(0xFFfcd34d).copy(
-                                    alpha = 0.2f + 0.25f * sin(craterTime + 2f)
+                                    alpha = (0.2f + 0.25f * sin(craterTime + 2f)).coerceIn(0f, 1f)
                                 ),
                                 radius = 5f * (0.7f + 0.3f * sin(craterTime + 2f)),
                                 center = center + Offset(-4f, 16f)
@@ -377,7 +377,7 @@ fun AnimatedBackground() {
                             
                             drawCircle(
                                 color = Color(0xFFfcd34d).copy(
-                                    alpha = 0.15f + 0.25f * sin(craterTime + 0.5f)
+                                    alpha = (0.15f + 0.25f * sin(craterTime + 0.5f)).coerceIn(0f, 1f)
                                 ),
                                 radius = 3f * (0.8f + 0.5f * sin(craterTime + 0.5f)),
                                 center = center + Offset(-12f, 8f)
@@ -403,7 +403,7 @@ fun AnimatedBackground() {
                         repeat(8) { i ->
                             val angle = i * 45f * PI / 180f
                             val beamLength = 48f
-                            val beamOpacity = 0.3f + 0.3f * sin(System.currentTimeMillis() / 4000f + i * 0.2f)
+                            val beamOpacity = (0.3f + 0.3f * sin(System.currentTimeMillis() / 4000f + i * 0.2f)).coerceIn(0f, 1f)
                             val beamScale = 0.5f + 0.7f * sin(System.currentTimeMillis() / 4000f + i * 0.2f)
                             
                             rotate(i * 45f) {

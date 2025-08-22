@@ -19,6 +19,7 @@ import androidx.compose.ui.draw.blur
 import androidx.compose.ui.draw.scale
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.*
+import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.drawscope.rotate
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.text.font.FontWeight
@@ -30,11 +31,12 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.mimi.ecommerceloginapp.components.AnimatedBackground
+import com.mimi.ecommerceloginapp.components.ZenniaColors
 import kotlin.math.*
 
 @Composable
-fun AnimatedLogo() {
-    val infiniteTransition = rememberInfiniteTransition(label = "logo")
+fun AnimatedZenniaLogo() {
+    val infiniteTransition = rememberInfiniteTransition(label = "zennia_logo")
     val density = LocalDensity.current
 
     // Entrance animations
@@ -108,14 +110,14 @@ fun AnimatedLogo() {
         label = "ring_opacity"
     )
 
-    val iconRotation by infiniteTransition.animateFloat(
+    val diamondSparkle by infiniteTransition.animateFloat(
         initialValue = 0f,
         targetValue = 360f,
         animationSpec = infiniteRepeatable(
             animation = tween(20000, easing = LinearEasing),
             repeatMode = RepeatMode.Restart
         ),
-        label = "icon_rotation"
+        label = "diamond_sparkle"
     )
 
     if (isVisible) {
@@ -130,7 +132,7 @@ fun AnimatedLogo() {
                 ),
             contentAlignment = Alignment.Center
         ) {
-            // Glowing ring effect (matches React's glowing ring)
+            // Glowing ring effect (matching original design)
             Canvas(
                 modifier = Modifier
                     .size(120.dp)
@@ -141,7 +143,7 @@ fun AnimatedLogo() {
                     drawCircle(
                         brush = Brush.radialGradient(
                             colors = listOf(
-                                Color(0xFF9333EA).copy(alpha = ringOpacity),
+                                ZenniaColors.accent.copy(alpha = ringOpacity),
                                 Color(0xFF3B82F6).copy(alpha = ringOpacity * 0.5f),
                                 Color.Transparent
                             ),
@@ -163,17 +165,88 @@ fun AnimatedLogo() {
                     ),
                 contentAlignment = Alignment.Center
             ) {
-                Icon(
-                    imageVector = Icons.Default.ShoppingBag,
-                    contentDescription = "Logo",
+                // Zennia Diamond Logo
+                Canvas(
                     modifier = Modifier
-                        .size(32.dp)
-                        .graphicsLayer(rotationZ = iconRotation),
-                    tint = Color(0xFF9333EA) // purple-600
-                )
+                        .size(40.dp)
+                        .graphicsLayer(rotationZ = diamondSparkle / 5f) // Gentle rotation
+                ) {
+                    val centerX = size.width / 2f
+                    val centerY = size.height / 2f
+                    val scale = size.width / 40f
+                    
+                    val goldGradient = Brush.linearGradient(
+                        colors = listOf(
+                            ZenniaColors.accent,
+                            Color(0xFFf4d03f),
+                            ZenniaColors.accent
+                        ),
+                        start = Offset(0f, 0f),
+                        end = Offset(size.width, size.height)
+                    )
+                    
+                    val diamondGradient = Brush.linearGradient(
+                        colors = listOf(
+                            ZenniaColors.diamond.copy(alpha = 0.9f),
+                            Color.White,
+                            ZenniaColors.diamond.copy(alpha = 0.9f)
+                        ),
+                        start = Offset(0f, 0f),
+                        end = Offset(size.width, size.height)
+                    )
+                    
+                    // Main diamond shape
+                    val mainDiamondPath = Path().apply {
+                        moveTo(centerX, centerY - 14f * scale) // Top
+                        lineTo(centerX - 10f * scale, centerY) // Left
+                        lineTo(centerX, centerY + 14f * scale) // Bottom
+                        lineTo(centerX + 10f * scale, centerY) // Right
+                        close()
+                    }
+                    
+                    drawPath(
+                        path = mainDiamondPath,
+                        brush = diamondGradient
+                    )
+                    
+                    drawPath(
+                        path = mainDiamondPath,
+                        color = ZenniaColors.accent,
+                        style = Stroke(width = 1.5f)
+                    )
+                    
+                    // Top facet
+                    val topFacetPath = Path().apply {
+                        moveTo(centerX - 8f * scale, centerY) // Left
+                        lineTo(centerX, centerY - 10f * scale) // Top
+                        lineTo(centerX + 8f * scale, centerY) // Right
+                        lineTo(centerX, centerY + 3f * scale) // Bottom
+                        close()
+                    }
+                    
+                    drawPath(
+                        path = topFacetPath,
+                        brush = goldGradient,
+                        alpha = 0.8f
+                    )
+                    
+                    // Center highlight with sparkle
+                    val sparkleAlpha = (0.6f + 0.4f * sin(diamondSparkle * PI / 180f).toFloat().absoluteValue).coerceIn(0f, 1f)
+                    drawCircle(
+                        color = Color.White.copy(alpha = sparkleAlpha),
+                        radius = 3f * scale,
+                        center = Offset(centerX, centerY)
+                    )
+                    
+                    drawCircle(
+                        color = ZenniaColors.accent.copy(alpha = 0.8f.coerceIn(0f, 1f)),
+                        radius = 2f * scale,
+                        center = Offset(centerX, centerY)
+                    )
+                }
             }
 
-            // Floating particles around logo (matches React's 6 particles)
+            // Floating particles around logo (matches original design)
             repeat(6) { i ->
                 val particleAngle = i * 60f
                 val radius = 50f
@@ -206,7 +279,7 @@ fun AnimatedLogo() {
                         .offset(x = xOffset.dp, y = yOffset.dp)
                         .size(4.dp)
                         .background(
-                            color = Color.White.copy(alpha = particleOpacity),
+                            color = ZenniaColors.accent.copy(alpha = particleOpacity),
                             shape = RoundedCornerShape(2.dp)
                         )
                         .scale(particleScale)
@@ -251,7 +324,7 @@ fun LoginScreen(
                     horizontalAlignment = Alignment.CenterHorizontally,
                     modifier = Modifier.padding(bottom = 32.dp)
                 ) {
-                    AnimatedLogo()
+                    AnimatedZenniaLogo()
 
                     Spacer(modifier = Modifier.height(16.dp))
 
@@ -275,7 +348,7 @@ fun LoginScreen(
                         enter = fadeIn(animationSpec = tween(800, delayMillis = 1000))
                     ) {
                         Text(
-                            text = "Sign in to your account to continue shopping",
+                            text = "Sign in to your account to continue shopping luxury jewelry",
                             fontSize = 16.sp,
                             color = Color.White.copy(alpha = 0.8f),
                             textAlign = TextAlign.Center,
@@ -326,7 +399,7 @@ fun LoginScreen(
                                 Icon(
                                     Icons.Default.Email,
                                     contentDescription = "Email",
-                                    tint = Color.Gray.copy(alpha = 0.4f)
+                                    tint = ZenniaColors.accent.copy(alpha = 0.7f)
                                 )
                             },
                             modifier = Modifier
@@ -336,9 +409,9 @@ fun LoginScreen(
                                     shape = RoundedCornerShape(12.dp)
                                 ),
                             colors = OutlinedTextFieldDefaults.colors(
-                                focusedBorderColor = Color.White.copy(alpha = 0.2f),
+                                focusedBorderColor = ZenniaColors.accent.copy(alpha = 0.6f),
                                 unfocusedBorderColor = Color.White.copy(alpha = 0.2f),
-                                cursorColor = Color.White,
+                                cursorColor = ZenniaColors.accent,
                                 focusedTextColor = Color.White,
                                 unfocusedTextColor = Color.White
                             ),
@@ -378,7 +451,7 @@ fun LoginScreen(
                                 Icon(
                                     Icons.Default.Lock,
                                     contentDescription = "Password",
-                                    tint = Color.Gray.copy(alpha = 0.4f)
+                                    tint = ZenniaColors.accent.copy(alpha = 0.7f)
                                 )
                             },
                             trailingIcon = {
@@ -388,7 +461,7 @@ fun LoginScreen(
                                     Icon(
                                         if (showPassword) Icons.Default.Visibility else Icons.Default.VisibilityOff,
                                         contentDescription = "Toggle password visibility",
-                                        tint = Color.Gray.copy(alpha = 0.4f)
+                                        tint = ZenniaColors.accent.copy(alpha = 0.7f)
                                     )
                                 }
                             },
@@ -400,9 +473,9 @@ fun LoginScreen(
                                     shape = RoundedCornerShape(12.dp)
                                 ),
                             colors = OutlinedTextFieldDefaults.colors(
-                                focusedBorderColor = Color.White.copy(alpha = 0.2f),
+                                focusedBorderColor = ZenniaColors.accent.copy(alpha = 0.6f),
                                 unfocusedBorderColor = Color.White.copy(alpha = 0.2f),
-                                cursorColor = Color.White,
+                                cursorColor = ZenniaColors.accent,
                                 focusedTextColor = Color.White,
                                 unfocusedTextColor = Color.White
                             ),
@@ -431,9 +504,9 @@ fun LoginScreen(
                                     checked = rememberMe,
                                     onCheckedChange = { rememberMe = it },
                                     colors = CheckboxDefaults.colors(
-                                        checkedColor = Color.White,
+                                        checkedColor = ZenniaColors.accent,
                                         uncheckedColor = Color.White.copy(alpha = 0.3f),
-                                        checkmarkColor = Color(0xFF9333EA)
+                                        checkmarkColor = Color.White
                                     )
                                 )
                                 Spacer(modifier = Modifier.width(8.dp))
@@ -449,7 +522,7 @@ fun LoginScreen(
                             ) {
                                 Text(
                                     text = "Forgot password?",
-                                    color = Color(0xFF93C5FD), // blue-200
+                                    color = ZenniaColors.accent,
                                     fontSize = 14.sp
                                 )
                             }
@@ -471,12 +544,7 @@ fun LoginScreen(
                             },
                             modifier = Modifier
                                 .fillMaxWidth()
-                                .height(56.dp)
-                                .graphicsLayer {
-                                    // Hover effect simulation
-                                    scaleX = 1f
-                                    scaleY = 1f
-                                },
+                                .height(56.dp),
                             colors = ButtonDefaults.buttonColors(
                                 containerColor = Color.Transparent
                             ),
@@ -488,8 +556,8 @@ fun LoginScreen(
                                     .background(
                                         brush = Brush.linearGradient(
                                             colors = listOf(
-                                                Color(0xFF9333EA), // purple-600
-                                                Color(0xFF3B82F6)  // blue-600
+                                                ZenniaColors.accent,
+                                                Color(0xFF3B82F6)
                                             )
                                         ),
                                         shape = RoundedCornerShape(12.dp)
@@ -649,7 +717,7 @@ fun LoginScreen(
                     ) {
                         Text(
                             text = "Sign up",
-                            color = Color(0xFF93C5FD), // blue-200
+                            color = ZenniaColors.accent,
                             fontSize = 14.sp,
                             fontWeight = FontWeight.Medium
                         )
