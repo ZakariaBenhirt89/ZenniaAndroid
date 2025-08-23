@@ -21,7 +21,7 @@ android {
     }
 
     composeOptions {
-        kotlinCompilerExtensionVersion = "1.5.0"
+        kotlinCompilerExtensionVersion = "1.5.3"
     }
     compileOptions {
         sourceCompatibility = JavaVersion.VERSION_1_8
@@ -54,9 +54,6 @@ dependencies {
     
     // Icons
     implementation("androidx.compose.material:material-icons-extended")
-    
-    // For blur effects
-    implementation("androidx.compose.ui:ui-graphics")
     
     // Testing
     testImplementation("junit:junit:4.13.2")
