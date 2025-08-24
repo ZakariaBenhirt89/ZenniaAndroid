@@ -14,11 +14,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 
-object ZenniaColors {
-    val accent = Color(0xFFFFD700) // Gold color
-    val diamond = Color(0xFFE8E8E8) // Light diamond color
-    val text = Color.White
-}
+
 
 @Composable
 fun ZenniaLogo(

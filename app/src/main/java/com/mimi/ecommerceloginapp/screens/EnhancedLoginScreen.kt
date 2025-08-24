@@ -29,6 +29,8 @@ import com.mimi.ecommerceloginapp.components.AnimatedZenniaLogo
 import com.mimi.ecommerceloginapp.components.ZenniaColors
 import android.widget.Toast
 import androidx.compose.ui.platform.LocalFocusManager
+import kotlinx.coroutines.launch
+import androidx.compose.material3.Divider
 
 // Enhanced validation states
 data class LoginFormState(
@@ -497,7 +499,7 @@ fun EnhancedLoginScreen(
                         .padding(vertical = 24.dp),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    HorizontalDivider(
+                    Divider(
                         modifier = Modifier.weight(1f),
                         color = Color.White.copy(alpha = 0.2f)
                     )
@@ -507,7 +509,7 @@ fun EnhancedLoginScreen(
                         fontSize = 14.sp,
                         modifier = Modifier.padding(horizontal = 16.dp)
                     )
-                    HorizontalDivider(
+                    Divider(
                         modifier = Modifier.weight(1f),
                         color = Color.White.copy(alpha = 0.2f)
                     )

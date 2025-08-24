@@ -58,8 +58,13 @@ class MainActivity : ComponentActivity() {
                                         onSignupSuccess = { currentScreen = Screen.ECOMMERCE }
                                     )
                                 } else {
-                                    SignUpScreen(
-                                        onSwitchToLogin = { currentScreen = Screen.LOGIN }
+                                    EnhancedSignUpScreen(
+                                        onSwitchToLogin = { currentScreen = Screen.LOGIN },
+                                        onSignupSuccess = {
+                                            // Handle successful signup - maybe navigate to login or main screen
+                                            currentScreen = Screen.LOGIN
+                                            // Or if you want to auto-login: currentScreen = Screen.HOME
+                                        }
                                     )
                                 }
                             }
