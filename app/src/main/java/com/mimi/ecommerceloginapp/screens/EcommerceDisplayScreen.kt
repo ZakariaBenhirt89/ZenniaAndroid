@@ -27,8 +27,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.mimi.ecommerceloginapp.components.AnimatedBackground
-import com.mimi.ecommerceloginapp.components.ZenniaColors
+import com.mimi.ecommerceloginapp.components.*
 import android.widget.Toast
 import coil.compose.AsyncImage
 import coil.request.ImageRequest
@@ -75,9 +74,12 @@ fun EcommerceDisplayScreen(
     var cartItems by remember { mutableStateOf<List<CartItem>>(emptyList()) }
     var favorites by remember { mutableStateOf<Set<String>>(emptySet()) }
     var isLoading by remember { mutableStateOf(true) }
+    var activeTab by remember { mutableStateOf("browse") }
+    var currentScreen by remember { mutableStateOf("main") }
+    var selectedProduct by remember { mutableStateOf<Product?>(null) }
     val context = LocalContext.current
 
-    // Simulate loading
+    // Simulate loading with enhanced loading screen
     LaunchedEffect(Unit) {
         kotlinx.coroutines.delay(1500)
         isLoading = false
@@ -226,50 +228,53 @@ fun EcommerceDisplayScreen(
     val cartTotal = cartItems.sumOf { it.product.price * it.quantity }
 
     if (isLoading) {
-        Box(
-            modifier = Modifier.fillMaxSize(),
-            contentAlignment = Alignment.Center
-        ) {
-            AnimatedBackground()
-            Column(
-                horizontalAlignment = Alignment.CenterHorizontally,
-                modifier = Modifier.padding(16.dp)
-            ) {
-                CircularProgressIndicator(
-                    color = ZenniaColors.accent,
-                    modifier = Modifier.size(48.dp)
-                )
-                Spacer(modifier = Modifier.height(16.dp))
-                Text(
-                    text = "Loading Zennia Collection...",
-                    color = Color.White,
-                    fontSize = 18.sp,
-                    fontWeight = FontWeight.Medium
+        LoadingScreen()
+        return
+    }
+    
+    // Navigation logic
+    when (currentScreen) {
+        "product_details" -> {
+            selectedProduct?.let { product ->
+                ProductDetailsScreen(
+                    product = product,
+                    onBack = { currentScreen = "main" },
+                    onAddToCart = { prod -> addToCart(prod) },
+                    isFavorite = favorites.contains(product.id),
+                    onToggleFavorite = { productId -> toggleFavorite(productId) }
                 )
             }
+            return
         }
-        return
+        "profile" -> {
+            UserProfileScreen(
+                onBack = { currentScreen = "main" },
+                onLogout = onLogout,
+                favoriteProducts = zenniaProducts.filter { favorites.contains(it.id) }
+            )
+            return
+        }
     }
 
     Box(modifier = Modifier.fillMaxSize()) {
         AnimatedBackground()
         
         Column(
-            modifier = Modifier.fillMaxSize()
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(bottom = 70.dp) // Add padding for bottom navigation
         ) {
-            // Header
+            // Header with enhanced logo
             TopAppBar(
                 title = {
                     Row(
                         verticalAlignment = Alignment.CenterVertically
                     ) {
-                        Icon(
-                            imageVector = Icons.Default.Star,
-                            contentDescription = "Zennia",
-                            tint = ZenniaColors.accent,
-                            modifier = Modifier.size(24.dp)
+                        ZenniaLogo(
+                            modifier = Modifier.size(32.dp),
+                            animate = false
                         )
-                        Spacer(modifier = Modifier.width(8.dp))
+                        Spacer(modifier = Modifier.width(12.dp))
                         Text(
                             text = "Zennia",
                             color = Color.White,
@@ -401,11 +406,31 @@ fun EcommerceDisplayScreen(
                         product = product,
                         isFavorite = favorites.contains(product.id),
                         onAddToCart = { addToCart(product) },
-                        onToggleFavorite = { toggleFavorite(product.id) }
+                        onToggleFavorite = { toggleFavorite(product.id) },
+                        onClick = { 
+                            selectedProduct = product
+                            currentScreen = "product_details"
+                        }
                     )
                 }
             }
         }
+        
+        // Bottom Navigation (like React version)
+        ZenniaBottomNavigation(
+            selectedTab = activeTab,
+            onTabSelected = { tab ->
+                activeTab = tab
+                when (tab) {
+                    "home" -> { /* Navigate to home */ }
+                    "browse" -> { /* Stay on current screen */ }
+                    "wishlist" -> { /* Show wishlist */ }
+                    "profile" -> { currentScreen = "profile" }
+                }
+            },
+            wishlistCount = favorites.size,
+            modifier = Modifier.align(Alignment.BottomCenter)
+        )
     }
 }
 
@@ -415,24 +440,57 @@ fun ProductCard(
     product: Product,
     isFavorite: Boolean,
     onAddToCart: () -> Unit,
-    onToggleFavorite: () -> Unit
+    onToggleFavorite: () -> Unit,
+    onClick: () -> Unit = {}
 ) {
+    var isHovered by remember { mutableStateOf(false) }
+    val hoverScale by animateFloatAsState(
+        targetValue = if (isHovered) 1.02f else 1f,
+        animationSpec = spring(dampingRatio = 0.8f, stiffness = 400f),
+        label = "card_scale"
+    )
+    
+    val cardElevation by animateFloatAsState(
+        targetValue = if (isHovered) 12f else 4f,
+        animationSpec = spring(dampingRatio = 0.8f, stiffness = 400f),
+        label = "card_elevation"
+    )
+
     Card(
+        onClick = onClick,
         modifier = Modifier
             .fillMaxWidth()
-            .aspectRatio(0.75f),
+            .aspectRatio(0.75f)
+            .graphicsLayer {
+                scaleX = hoverScale
+                scaleY = hoverScale
+                shadowElevation = cardElevation
+            },
         colors = CardDefaults.cardColors(
-            containerColor = Color.White.copy(alpha = 0.05f)
+            containerColor = Color.White.copy(alpha = 0.08f)
         ),
-        shape = RoundedCornerShape(16.dp),
-        border = BorderStroke(1.dp, Color.White.copy(alpha = 0.1f))
+        shape = RoundedCornerShape(20.dp),
+        border = BorderStroke(1.dp, Color.White.copy(alpha = 0.15f)),
+        elevation = CardDefaults.cardElevation(
+            defaultElevation = cardElevation.dp
+        )
     ) {
-        Column {
-            // Product Image
+        Column(
+            modifier = Modifier.fillMaxSize()
+        ) {
+            // Product Image Container
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
                     .weight(1f)
+                    .background(
+                        Brush.verticalGradient(
+                            colors = listOf(
+                                Color.White.copy(alpha = 0.02f),
+                                Color.Transparent
+                            )
+                        )
+                    )
             ) {
                 AsyncImage(
                     model = ImageRequest.Builder(LocalContext.current)
@@ -442,72 +500,151 @@ fun ProductCard(
                     contentDescription = product.name,
                     modifier = Modifier
                         .fillMaxSize()
-                        .clip(RoundedCornerShape(topStart = 16.dp, topEnd = 16.dp)),
+                        .clip(RoundedCornerShape(topStart = 20.dp, topEnd = 20.dp)),
                     contentScale = ContentScale.Crop
                 )
 
-                // Badges
-                Column(
+                // Enhanced Gradient Overlay
+                Box(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .background(
+                            Brush.verticalGradient(
+                                colors = listOf(
+                                    Color.Transparent,
+                                    Color.Black.copy(alpha = 0.3f)
+                                ),
+                                startY = 100f
+                            )
+                        )
+                )
+
+                // Status Badges Row
+                Row(
                     modifier = Modifier
                         .align(Alignment.TopStart)
-                        .padding(8.dp)
+                        .padding(12.dp),
+                    horizontalArrangement = Arrangement.spacedBy(6.dp)
                 ) {
                     if (product.isNew) {
                         Badge(
-                            containerColor = Color(0xFF3B82F6),
-                            contentColor = Color.White
+                            containerColor = Color(0xFF10B981),
+                            contentColor = Color.White,
+                            modifier = Modifier.clip(RoundedCornerShape(8.dp))
                         ) {
-                            Text("New", fontSize = 10.sp)
+                            Text(
+                                "New",
+                                fontSize = 10.sp,
+                                fontWeight = FontWeight.Medium
+                            )
                         }
                     }
                     if (product.discount != null) {
                         Badge(
-                            containerColor = Color.Red,
-                            contentColor = Color.White
+                            containerColor = Color(0xFFEF4444),
+                            contentColor = Color.White,
+                            modifier = Modifier.clip(RoundedCornerShape(8.dp))
                         ) {
-                            Text("-${product.discount}%", fontSize = 10.sp)
+                            Text(
+                                "-${product.discount}%",
+                                fontSize = 10.sp,
+                                fontWeight = FontWeight.Medium
+                            )
                         }
                     }
                     if (!product.inStock) {
                         Badge(
-                            containerColor = Color.Gray,
-                            contentColor = Color.White
+                            containerColor = Color(0xFF6B7280),
+                            contentColor = Color.White,
+                            modifier = Modifier.clip(RoundedCornerShape(8.dp))
                         ) {
-                            Text("Sold Out", fontSize = 10.sp)
+                            Text(
+                                "Sold Out",
+                                fontSize = 10.sp,
+                                fontWeight = FontWeight.Medium
+                            )
                         }
                     }
                 }
 
-                // Favorite button
-                IconButton(
+                // Enhanced Favorite Button
+                Surface(
                     onClick = onToggleFavorite,
-                    modifier = Modifier.align(Alignment.TopEnd)
+                    modifier = Modifier
+                        .align(Alignment.TopEnd)
+                        .padding(12.dp)
+                        .size(32.dp),
+                    shape = CircleShape,
+                    color = Color.Black.copy(alpha = 0.4f),
+                    contentColor = if (isFavorite) Color(0xFFEF4444) else Color.White
                 ) {
-                    Icon(
-                        if (isFavorite) Icons.Filled.Favorite else Icons.Default.FavoriteBorder,
-                        contentDescription = "Favorite",
-                        tint = if (isFavorite) Color.Red else Color.White
-                    )
+                    Box(
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Icon(
+                            imageVector = if (isFavorite) Icons.Filled.Favorite else Icons.Default.FavoriteBorder,
+                            contentDescription = "Favorite",
+                            modifier = Modifier.size(18.dp)
+                        )
+                    }
+                }
+
+                // 3D View Button (NEW)
+                Surface(
+                    onClick = {
+                        // Will be implemented with 3D view functionality
+                        onClick()
+                    },
+                    modifier = Modifier
+                        .align(Alignment.BottomEnd)
+                        .padding(12.dp)
+                        .size(32.dp),
+                    shape = CircleShape,
+                    color = ZenniaColors.accent.copy(alpha = 0.9f),
+                    contentColor = Color.Black
+                ) {
+                    Box(
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.Rotate90DegreesCcw,
+                            contentDescription = "3D View",
+                            modifier = Modifier.size(18.dp)
+                        )
+                    }
                 }
             }
 
-            // Product Details
+            // Enhanced Product Details Section
             Column(
-                modifier = Modifier.padding(12.dp)
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .background(
+                        Brush.verticalGradient(
+                            colors = listOf(
+                                Color.White.copy(alpha = 0.05f),
+                                Color.Transparent
+                            )
+                        )
+                    )
+                    .padding(16.dp),
+                verticalArrangement = Arrangement.spacedBy(8.dp)
             ) {
+                // Product Name
                 Text(
                     text = product.name,
                     color = Color.White,
-                    fontSize = 14.sp,
-                    fontWeight = FontWeight.Medium,
+                    fontSize = 15.sp,
+                    fontWeight = FontWeight.SemiBold,
                     maxLines = 2,
-                    overflow = TextOverflow.Ellipsis
+                    overflow = TextOverflow.Ellipsis,
+                    lineHeight = 20.sp
                 )
 
-                // Rating
+                // Rating and Reviews
                 Row(
                     verticalAlignment = Alignment.CenterVertically,
-                    modifier = Modifier.padding(vertical = 4.dp)
+                    horizontalArrangement = Arrangement.spacedBy(4.dp)
                 ) {
                     repeat(5) { index ->
                         Icon(
@@ -516,58 +653,102 @@ fun ProductCard(
                             tint = if (index < product.rating.toInt()) 
                                 ZenniaColors.accent 
                             else 
-                                Color.Gray,
-                            modifier = Modifier.size(12.dp)
+                                Color(0xFF374151),
+                            modifier = Modifier.size(14.dp)
                         )
                     }
                     Text(
-                        text = " (${product.reviewCount})",
-                        color = Color.White.copy(alpha = 0.7f),
+                        text = "${product.rating}",
+                        color = Color.White,
+                        fontSize = 12.sp,
+                        fontWeight = FontWeight.Medium
+                    )
+                    Text(
+                        text = "(${product.reviewCount})",
+                        color = Color.White.copy(alpha = 0.6f),
                         fontSize = 12.sp
                     )
                 }
 
-                // Price
+                // Price Section
                 Row(
                     verticalAlignment = Alignment.CenterVertically,
-                    modifier = Modifier.padding(bottom = 8.dp)
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    modifier = Modifier.fillMaxWidth()
                 ) {
                     Text(
-                        text = "$${product.price}",
+                        text = "$${String.format("%,d", product.price)}",
                         color = ZenniaColors.accent,
-                        fontSize = 16.sp,
+                        fontSize = 18.sp,
                         fontWeight = FontWeight.Bold
                     )
                     if (product.originalPrice != null) {
-                        Spacer(modifier = Modifier.width(8.dp))
                         Text(
-                            text = "$${product.originalPrice}",
+                            text = "$${String.format("%,d", product.originalPrice)}",
                             color = Color.White.copy(alpha = 0.5f),
-                            fontSize = 12.sp,
+                            fontSize = 14.sp,
                             textDecoration = androidx.compose.ui.text.style.TextDecoration.LineThrough
                         )
                     }
+                    Spacer(modifier = Modifier.weight(1f))
+                    
+                    // Quick Add Button
+                    Surface(
+                        onClick = onAddToCart,
+                        modifier = Modifier.size(36.dp),
+                        shape = CircleShape,
+                        enabled = product.inStock,
+                        color = if (product.inStock) ZenniaColors.accent else Color(0xFF6B7280),
+                        contentColor = Color.Black
+                    ) {
+                        Box(
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Icon(
+                                Icons.Default.Add,
+                                contentDescription = "Add to Cart",
+                                modifier = Modifier.size(20.dp)
+                            )
+                        }
+                    }
                 }
 
-                // Add to Cart Button
-                Button(
-                    onClick = onAddToCart,
-                    enabled = product.inStock,
-                    modifier = Modifier.fillMaxWidth(),
-                    colors = ButtonDefaults.buttonColors(
-                        containerColor = ZenniaColors.accent,
-                        contentColor = Color.Black,
-                        disabledContainerColor = Color.Gray
-                    ),
-                    shape = RoundedCornerShape(8.dp)
-                ) {
-                    Icon(
-                        Icons.Default.Add,
-                        contentDescription = null,
-                        modifier = Modifier.size(16.dp)
-                    )
-                    Spacer(modifier = Modifier.width(4.dp))
-                    Text("Add to Cart", fontSize = 12.sp)
+                // Materials Preview
+                if (product.materials.isNotEmpty()) {
+                    LazyRow(
+                        horizontalArrangement = Arrangement.spacedBy(4.dp)
+                    ) {
+                        items(product.materials.take(3)) { material ->
+                            Surface(
+                                shape = RoundedCornerShape(12.dp),
+                                color = Color.White.copy(alpha = 0.1f),
+                                contentColor = Color.White.copy(alpha = 0.8f)
+                            ) {
+                                Text(
+                                    text = material,
+                                    modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
+                                    fontSize = 10.sp,
+                                    fontWeight = FontWeight.Medium
+                                )
+                            }
+                        }
+                        if (product.materials.size > 3) {
+                            item {
+                                Surface(
+                                    shape = RoundedCornerShape(12.dp),
+                                    color = Color.White.copy(alpha = 0.1f),
+                                    contentColor = Color.White.copy(alpha = 0.6f)
+                                ) {
+                                    Text(
+                                        text = "+${product.materials.size - 3}",
+                                        modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
+                                        fontSize = 10.sp,
+                                        fontWeight = FontWeight.Medium
+                                    )
+                                }
+                            }
+                        }
+                    }
                 }
             }
         }

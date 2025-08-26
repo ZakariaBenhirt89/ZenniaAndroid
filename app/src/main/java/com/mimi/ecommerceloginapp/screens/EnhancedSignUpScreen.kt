@@ -24,9 +24,7 @@ import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.mimi.ecommerceloginapp.components.AnimatedBackground
-import com.mimi.ecommerceloginapp.components.AnimatedZenniaLogo
-import com.mimi.ecommerceloginapp.components.ZenniaColors
+import com.mimi.ecommerceloginapp.components.*
 import android.widget.Toast
 import androidx.compose.ui.platform.LocalFocusManager
 import kotlinx.coroutines.launch
@@ -181,7 +179,10 @@ fun EnhancedSignUpScreen(
                     horizontalAlignment = Alignment.CenterHorizontally,
                     modifier = Modifier.padding(bottom = 32.dp)
                 ) {
-                    AnimatedZenniaLogo()
+                    ZenniaLogo(
+                        modifier = Modifier.size(80.dp),
+                        animate = true
+                    )
 
                     Spacer(modifier = Modifier.height(16.dp))
 
